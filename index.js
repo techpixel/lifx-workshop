@@ -16,63 +16,44 @@ const Lifx  = require('./node-lifx-lan/lib/lifx-lan');
     "blue": "#0000FF",
     "purple": "#FF00FF"
   }
+
+  let cycle = ["red", "orange", "yellow", "green", "blue", "purple"];
   
-  let bw_frames = [
+  let frames = [
     [
       ["red", "orange", "yellow", "green"],
       ["orange", "yellow", "green", "blue"],
       ["yellow", "green", "blue", "purple"]
-    ],  
-    [
-      ["purple", "red", "orange", "yellow"],
-      ["red", "orange", "yellow", "green"],
-      ["orange", "yellow", "green", "blue"]
-    ],
-    [
-      ["blue", "purple", "red", "orange"],
-      ["purple", "red", "orange", "yellow"],
-      ["red", "orange", "yellow", "green"]
-    ],  
-    [
-      ["green", "blue", "purple", "red"],
-      ["blue", "purple", "red", "orange"],
-      ["purple", "red", "orange", "yellow"]
-    ], 
-    [
-      ["yellow", "green", "blue", "purple"],
-      ["green", "blue", "purple", "red"],
-      ["blue", "purple", "red", "orange"]
-    ],
-    [
-      ["orange", "yellow", "green", "blue"],
-      ["yellow", "green", "blue", "purple"],
-      ["green", "blue", "purple", "red"]
-    ]
+    ] 
   ]
 
-  let frames = []
+  let frames_linear = linearize(frames)
 
-  for (let i = 0; i < bw_frames.length; i++) {
-    frames.push([])
-    for (let r = 0; r < bw_frames[0].length; r++) {
-      for (let c = 0; c < bw_frames[0][0].length; c++) {
+  let cycle_obj = create_cycle_obj(cycle)
 
-        let hex = (colors[bw_frames[i][r][c]] ? colors[bw_frames[i][r][c]] : bw_frames[i][r][c]).substring(1)
+  for (let i = 1; i < cycle.length; i++) {
+    frames_linear.push([])
+    for (let pixel = 0; pixel < frames_linear[i-1].length; pixel++) {
+      frames_linear[i].push(cycle_obj[frames_linear[i-1][pixel]])
+    }
+  }
 
-        let pixel = {
-          red: parseInt("0x"+hex.substring(0,2))/parseInt("0xFF"),
-          green: parseInt("0x"+hex.substring(2,4))/parseInt("0xFF"),
-          blue: parseInt("0x"+hex.substring(4,6))/parseInt("0xFF"),
-          brightness: bw_frames[i][r][c].length > 7 ? parseInt("0x"+hex.substring(6,8))/parseInt("0xFF")*100 : 100,
-        }
+  let frames_rgb = []
 
-        if (r % 2 == 0) {
-          frames[frames.length-1].push(pixel)
-        } 
-        else {
-          frames[frames.length-1].splice(r*bw_frames[0][0].length, 0, pixel)
-        }
+  for (let frame_index = 0; frame_index < frames_linear.length; frame_index++) {
+    frames_rgb.push([])
+    for (let pixel_index = 0; pixel_index < frames[0].length; pixel_index++) {
+
+      let hex = (colors[frames_linear[frame_index][pixel_index]] ? colors[frames_linear[frame_index][pixel_index]] : frames_linear[frame_index][pixel_index]).substring(1)
+
+      let pixel = {
+        red: parseInt("0x"+hex.substring(0,2))/parseInt("0xFF"),
+        green: parseInt("0x"+hex.substring(2,4))/parseInt("0xFF"),
+        blue: parseInt("0x"+hex.substring(4,6))/parseInt("0xFF"),
+        brightness: frames_linear[frame_index][pixel_index].length > 7 ? parseInt("0x"+hex.substring(6,8))/parseInt("0xFF")*100 : 100,
       }
+
+      frames_rgb[frame_index].push(pixel)
     }
   }
 
@@ -101,3 +82,39 @@ const Lifx  = require('./node-lifx-lan/lib/lifx-lan');
   }
 
 })();
+
+function linearize(frames) {
+
+  let frames_linear = []
+
+  for (let i = 0; i < frames.length; i++) {
+    frames_linear.push([])
+    for (let r = 0; r < frames[0].length; r++) {
+      for (let c = 0; c < frames[0][0].length; c++) {
+
+        let pixel = frames[i][r][c]
+
+        if (r % 2 == 0) {
+          frames_linear[frames_linear.length-1].push(pixel)
+        } 
+        else {
+          frames_linear[frames_linear.length-1].splice(r*frames[0][0].length, 0, pixel)
+        }
+      }
+    }
+  }
+
+  return frames_linear
+}
+
+function create_cycle_obj(cycle) {
+  let cycle_obj = {}
+
+  cycle_obj[cycle[0]] = cycle[cycle.length-1]
+
+  for (let i = 1; i < cycle.length; i++) {
+    cycle_obj[cycle[i]] = cycle[i-1]
+  }
+
+  return cycle_obj
+}
